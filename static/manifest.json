@@ -1,0 +1,9 @@
+{
+  "name": "Harcama Notu",
+  "short_name": "Harcama",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#6366f1",
+  "theme_color": "#6366f1",
+  "icons": [{"src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml"}]
+}

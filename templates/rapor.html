@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <title>{{ tx('report') }} — {{ ay }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>@media print { .no-print { display: none } }</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>{{ tx('report') }} — {{ ay }}</h1>
+  <p>{{ tx('month_expense') }}: {{ '%.2f'|format(gider) }} TL</p>
+  <p>{{ tx('month_income') }}: {{ '%.2f'|format(gelir) }} TL</p>
+  <p>{{ tx('net_balance') }}: {{ '%.2f'|format(net) }} TL</p>
+  <hr>
+  {% for k in kayitlar %}
+  <p>{{ k.tarih }} · {{ k.aciklama }} · {{ '%.2f'|format(k.tutar) }} TL</p>
+  {% endfor %}
+  <button class="btn btn-primary no-print" onclick="window.print()">{{ tx('report') }}</button>
+</div>
+</body>
+</html>

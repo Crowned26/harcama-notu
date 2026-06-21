@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <title>{{ tx('pin_enter') }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="pin-page">
+<div class="wrap pin-wrap">
+  <h1>{{ tx('pin_enter') }}</h1>
+  {% if hata %}<div class="flash">{{ hata }}</div>{% endif %}
+  <form method="post">
+    <input name="pin" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" autofocus required>
+    <button class="btn btn-primary full" type="submit">{{ tx('apply') }}</button>
+  </form>
+</div>
+</body>
+</html>
