@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="{{ lang }}" class="{{ 'dark' if karanlik else '' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ tx('title') }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script>
+    (function () {
+      var saved = localStorage.getItem("theme");
+      var dark = saved ? saved === "dark" : {{ 'true' if karanlik else 'false' }};
+      document.documentElement.classList.toggle("dark", dark);
+    })();
+  </script>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>{{ tx('title') }}</h1>
+    <div class="pills">
+      <a class="pill {{ 'active' if lang=='tr' else '' }}" href="{{ url_for('ana', lang='tr', ay=ay or None, yil=yil) }}">TR</a>
+      <a class="pill {{ 'active' if lang=='en' else '' }}" href="{{ url_for('ana', lang='en', ay=ay or None, yil=yil) }}">EN</a>
+      <button type="button" class="pill pill-icon" id="themeBtn" title="Theme"><span id="themeIcon">{{ '☀' if karanlik else '☾' }}</span></button>
+    </div>
+  </header>
+
+  {% if basari %}<div class="toast">{{ basari }}</div>{% endif %}
+  {% if hata %}<div class="flash">{{ hata }}</div>{% endif %}
+
+  <form method="get" class="panel toolbar">
+    <input type="hidden" name="lang" value="{{ lang }}">
+    <div class="grid grid-3">
+      <div>
+        <label>{{ tx('month') }}</label>
+        <select name="ay">
+          <option value="">{{ tx('all_months') }}</option>
+          {% for m in range(1, 13) %}
+          <option value="{{ m }}" {{ 'selected' if sel_ay==m and not tum }}>{{ ay_adlari[m] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>{{ tx('year') }}</label>
+        <select name="yil">
+          {% for y in range(sel_yil - 2, sel_yil + 1) %}
+          <option value="{{ y }}" {{ 'selected' if sel_yil==y }}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>{{ tx('sort') }}</label>
+        <select name="sort">
+          {% for k,v in sort_opts.items() %}
+          <option value="{{ k }}" {{ 'selected' if sort==k }}>{{ v }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="full"><label>{{ tx('search') }}</label><input name="q" value="{{ q }}" placeholder="{{ tx('search') }}"></div>
+      <div><label>{{ tx('category') }}</label><select name="kat"><option value="">{{ tx('all') }}</option>{% for c in kategoriler %}<option value="{{ c }}" {{ 'selected' if kat==c }}>{{ tx(c) }}</option>{% endfor %}</select></div>
+      <div><label>{{ tx('type') }}</label><select name="tip_f"><option value="">{{ tx('all') }}</option><option value="gider" {{ 'selected' if tip_f=='gider' }}>{{ tx('expense') }}</option><option value="gelir" {{ 'selected' if tip_f=='gelir' }}>{{ tx('income') }}</option></select></div>
+    </div>
+    <div class="actions"><button class="btn btn-primary btn-sm" type="submit">{{ tx('apply') }}</button></div>
+  </form>
+
+  <div class="stats">
+    <div class="stat expense"><span>{{ tx('month_expense') }}</span><strong>{{ '%.2f'|format(gider) }} TL</strong></div>
+    <div class="stat income"><span>{{ tx('month_income') }}</span><strong>{{ '%.2f'|format(gelir) }} TL</strong></div>
+    <div class="stat net"><span>{{ tx('net_balance') }}</span><strong>{{ '%.2f'|format(net) }} TL</strong></div>
+    <div class="stat budget stat-wide {{ 'warn' if butce_asildi else '' }}">
+      <span>{{ tx('budget') }}</span>
+      {% if butce > 0 %}
+        <strong>{{ '%.2f'|format(butce_kalan) }} TL · {{ tx('budget_left') }}</strong>
+        <div class="progress {{ 'over' if butce_asildi else '' }}"><span style="width:{{ butce_yuzde }}%"></span></div>
+        <div class="progress-label">{{ '%.0f'|format(butce_yuzde) }}% {{ tx('budget_used') }}</div>
+      {% else %}<strong>—</strong>{% endif %}
+    </div>
+  </div>
+
+  {% if favoriler %}
+  <p class="section-label">{{ tx('favorites') }}</p>
+  <div class="chips">
+    {% for f in favoriler %}
+    <form method="post" action="{{ url_for('ekle_form') }}">
+      <input type="hidden" name="aciklama" value="{{ f.aciklama }}">
+      <input type="hidden" name="tutar" value="{{ f.tutar }}">
+      <input type="hidden" name="kategori" value="{{ f.kategori }}">
+      <input type="hidden" name="tip" value="{{ f.tip }}">
+      <input type="hidden" name="ay" value="{{ ay }}"><input type="hidden" name="yil" value="{{ yil }}">
+      <button type="submit" class="chip fav">★ {{ f.aciklama }} · {{ '%.0f'|format(f.tutar) }}</button>
+    </form>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if hizli %}
+  <p class="section-label">{{ tx('quick_add') }}</p>
+  <div class="chips">
+    {% for h in hizli %}
+    <form method="post" action="{{ url_for('ekle_form') }}">
+      <input type="hidden" name="aciklama" value="{{ h.aciklama }}">
+      <input type="hidden" name="tutar" value="{{ h.tutar }}">
+      <input type="hidden" name="kategori" value="{{ h.kategori }}">
+      <input type="hidden" name="tip" value="{{ h.tip }}">
+      <input type="hidden" name="ay" value="{{ ay }}"><input type="hidden" name="yil" value="{{ yil }}">
+      <button type="submit" class="chip">{{ h.aciklama }} · {{ '%.0f'|format(h.tutar) }}</button>
+    </form>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <section class="panel">
+    <p class="panel-title">{{ tx('edit') if duzenle else tx('add') }}</p>
+    {% if duzenle %}
+    <form method="post" action="{{ url_for('guncelle_form', kayit_id=duzenle.id) }}">
+      <input type="hidden" name="ay" value="{{ ay }}"><input type="hidden" name="yil" value="{{ yil }}">
+      <div class="grid">
+        <div class="full"><label>{{ tx('desc') }}</label><input name="aciklama" value="{{ duzenle.aciklama }}" required></div>
+        <div><label>{{ tx('amount') }}</label><input name="tutar" type="number" step="0.01" value="{{ duzenle.tutar }}" required></div>
+        <div><label>{{ tx('type') }}</label><select name="tip"><option value="gider" {{ 'selected' if duzenle.tip=='gider' }}>{{ tx('expense') }}</option><option value="gelir" {{ 'selected' if duzenle.tip=='gelir' }}>{{ tx('income') }}</option></select></div>
+        <div><label>{{ tx('category') }}</label><select name="kategori">{% for c in kategoriler %}<option value="{{ c }}" {{ 'selected' if duzenle.kategori==c }}>{{ tx(c) }}</option>{% endfor %}</select></div>
+        <div class="full"><label>{{ tx('note') }}</label><input name="not" value="{{ duzenle.not or '' }}"></div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit">{{ tx('save') }}</button>
+        <a class="btn btn-ghost" href="{{ url_for('ana', lang=lang, ay=ay, yil=yil) }}">{{ tx('cancel') }}</a>
+      </div>
+    </form>
+    {% else %}
+    <form method="post" action="{{ url_for('ekle_form') }}">
+      <input type="hidden" name="ay" value="{{ ay }}"><input type="hidden" name="yil" value="{{ yil }}">
+      <div class="grid">
+        <div class="full"><label>{{ tx('desc') }}</label><input name="aciklama" placeholder="{{ tx('desc') }}" required></div>
+        <div><label>{{ tx('amount') }}</label><input name="tutar" type="number" step="0.01" min="0.01" required></div>
+        <div><label>{{ tx('type') }}</label><select name="tip"><option value="gider">{{ tx('expense') }}</option><option value="gelir">{{ tx('income') }}</option></select></div>
+        <div><label>{{ tx('category') }}</label><select name="kategori">{% for c in kategoriler %}<option value="{{ c }}">{{ tx(c) }}</option>{% endfor %}</select></div>
+        <div class="full"><label>{{ tx('note') }}</label><input name="not" placeholder="{{ tx('note') }}"></div>
+      </div>
+      <div class="actions"><button class="btn btn-primary" type="submit">{{ tx('add') }}</button></div>
+    </form>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <p class="panel-title">{{ tx('records') }}</p>
+    {% if kayitlar %}
+    <div class="list">
+      {% for k in kayitlar %}
+      <article class="item">
+        <div class="item-left">
+          <div class="item-title">{{ k.aciklama }}</div>
+          <div class="item-meta">
+            <span class="tag">{{ tx(k.kategori|default('diger')) }}</span>
+            {{ k.tarih[5:16] }}{% if k.not %} · {{ k.not }}{% endif %}
+          </div>
+        </div>
+        <div>
+          <div class="item-amount {{ 'income' if k.tip=='gelir' else 'expense' }}">{{ '%.2f'|format(k.tutar) }} TL</div>
+          <div class="item-actions">
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('ana', lang=lang, edit=k.id, q=q, kat=kat, tip_f=tip_f, sort=sort, ay=ay, yil=yil) }}">{{ tx('edit') }}</a>
+            <form method="post" action="{{ url_for('sil_form', kayit_id=k.id) }}" onsubmit="return confirm('{{ tx('confirm_delete') }}')">
+              <input type="hidden" name="ay" value="{{ ay }}"><input type="hidden" name="yil" value="{{ yil }}">
+              <button class="btn btn-ghost btn-sm btn-danger" type="submit">{{ tx('delete') }}</button>
+            </form>
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}<p class="empty">{{ tx('empty') }}</p>{% endif %}
+  </section>
+
+  <details class="panel">
+    <summary>{{ tx('more') }}</summary>
+    <div class="inner">
+      <p class="legend"><strong>{{ tx('weekly') }}:</strong> {{ '%.2f'|format(h_gider) }} / {{ '%.2f'|format(h_gelir) }} TL · <strong>{{ tx('yearly') }}:</strong> {{ '%.2f'|format(y_gider) }} / {{ '%.2f'|format(y_gelir) }} TL</p>
+
+      <p class="panel-title">{{ tx('trend') }}</p>
+      <div class="trend">
+        {% for t in trend %}
+        <div class="trend-col">
+          <div class="trend-bar" style="height:{{ (t.gider / trend_max * 100)|int }}%"></div>
+          <span>{{ ay_adlari[t.ay] }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if chart %}
+      <p class="panel-title">{{ tx('chart') }}</p>
+      <div class="chart">{% for c, val in chart.items() %}<span style="width:{{ val * 100 / chart_total }}%;background:{{ chart_renk[c] }}"></span>{% endfor %}</div>
+      <div class="legend">{% for c, val in chart.items() %}<div><span class="dot" style="background:{{ chart_renk[c] }}"></span>{{ tx(c) }} — {{ '%.2f'|format(val) }} TL</div>{% endfor %}</div>
+      {% endif %}
+
+      <p class="panel-title">{{ tx('fav_add') }}</p>
+      <form method="post" action="{{ url_for('favori_ekle_form') }}">
+        <input type="hidden" name="ay" value="{{ ay }}"><input type="hidden" name="yil" value="{{ yil }}">
+        <div class="grid">
+          <div><input name="aciklama" placeholder="{{ tx('desc') }}" required></div>
+          <div><input name="tutar" type="number" step="0.01" placeholder="{{ tx('amount') }}" required></div>
+        </div>
+        <div class="actions"><button class="btn btn-ghost btn-sm" type="submit">{{ tx('fav_add') }}</button></div>
+      </form>
+      {% for f in favoriler %}
+      <div class="item-meta">{{ f.aciklama }} — {{ '%.2f'|format(f.tutar) }} TL
+        <form method="post" action="{{ url_for('favori_sil_form', fav_id=f.id) }}" style="display:inline" onsubmit="return confirm('{{ tx('confirm_delete') }}')">
+          <input type="hidden" name="ay" value="{{ ay }}"><input type="hidden" name="yil" value="{{ yil }}">
+          <button class="btn btn-ghost btn-sm btn-danger" type="submit">{{ tx('delete') }}</button>
+        </form>
+      </div>
+      {% endfor %}
+
+      <p class="panel-title">{{ tx('recurring') }}</p>
+      <form method="post" action="{{ url_for('tekrar_ekle') }}">
+        <input type="hidden" name="ay" value="{{ ay }}"><input type="hidden" name="yil" value="{{ yil }}">
+        <div class="grid grid-3">
+          <div><input name="aciklama" placeholder="{{ tx('desc') }}" required></div>
+          <div><input name="tutar" type="number" step="0.01" placeholder="{{ tx('amount') }}" required></div>
+          <div><input name="gun" type="number" min="1" max="28" value="1"></div>
+        </div>
+        <div class="actions"><button class="btn btn-ghost btn-sm" type="submit">{{ tx('add') }}</button></div>
+      </form>
+      {% for t in tekrarlayan %}
+      <div class="item-meta">{{ t.aciklama }} — {{ '%.2f'|format(t.tutar) }} TL ({{ t.gun }})
+        <form method="post" action="{{ url_for('tekrar_sil', item_id=t.id) }}" style="display:inline" onsubmit="return confirm('{{ tx('confirm_delete') }}')">
+          <input type="hidden" name="ay" value="{{ ay }}"><input type="hidden" name="yil" value="{{ yil }}">
+          <button class="btn btn-ghost btn-sm btn-danger" type="submit">{{ tx('delete') }}</button>
+        </form>
+      </div>
+      {% endfor %}
+
+      <p class="panel-title">{{ tx('settings') }}</p>
+      <form method="post" action="{{ url_for('ayarlar_kaydet') }}">
+        <input type="hidden" name="ay" value="{{ ay }}"><input type="hidden" name="yil" value="{{ yil }}">
+        <label>{{ tx('budget_limit') }}</label>
+        <input name="butce" type="number" step="0.01" min="0" value="{{ butce }}">
+        <div class="actions"><button class="btn btn-ghost btn-sm" type="submit">{{ tx('save') }}</button></div>
+      </form>
+      <div class="actions">
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('csv_indir') }}">{{ tx('export_csv') }}</a>
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('yedek_indir') }}">{{ tx('backup') }}</a>
+      </div>
+      <form method="post" action="{{ url_for('yedek_yukle_form') }}" enctype="multipart/form-data" class="file-wrap">
+        <input type="hidden" name="ay" value="{{ ay }}"><input type="hidden" name="yil" value="{{ yil }}">
+        <input type="file" name="dosya" accept=".json" required>
+        <button class="btn btn-ghost btn-sm" type="submit">{{ tx('restore') }}</button>
+      </form>
+    </div>
+  </details>
+</div>
+<script>
+  document.getElementById("themeBtn").onclick = function () {
+    var html = document.documentElement;
+    var dark = !html.classList.contains("dark");
+    html.classList.toggle("dark", dark);
+    localStorage.setItem("theme", dark ? "dark" : "light");
+    document.getElementById("themeIcon").textContent = dark ? "☀" : "☾";
+    fetch("{{ url_for('theme_kaydet') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dark: dark })
+    });
+  };
+</script>
+</body>
+</html>
