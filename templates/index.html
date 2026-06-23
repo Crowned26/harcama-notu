@@ -25,7 +25,6 @@
 
   <nav class="tabs">
     <a class="{{ 'active' if tab=='home' }}" href="?tab=home&ay={{ ay }}&yil={{ yil }}&lang={{ lang }}">{{ tx('tab_home') }}</a>
-    <a class="{{ 'active' if tab=='turbo' }}" href="?tab=turbo&ay={{ ay }}&yil={{ yil }}&lang={{ lang }}">{{ tx('tab_turbo') }}</a>
     <a class="{{ 'active' if tab=='analytics' }}" href="?tab=analytics&ay={{ ay }}&yil={{ yil }}&lang={{ lang }}">{{ tx('tab_analytics') }}</a>
     <a class="{{ 'active' if tab=='more' }}" href="?tab=more&ay={{ ay }}&yil={{ yil }}&lang={{ lang }}">{{ tx('tab_more') }}</a>
   </nav>
@@ -118,29 +117,6 @@
     {% else %}<p class="empty">{{ tx('empty') }}</p>{% endif %}
   </section>
   <a href="#add" class="fab" title="{{ tx('add') }}">+</a>
-  {% endif %}
-
-  {% if tab == 'turbo' %}
-  <section class="panel turbo-panel">
-    <p class="panel-title">{{ tx('turbo_title') }}</p>
-    <p class="turbo-hint">{{ tx('turbo_cash_disc') }}</p>
-
-    {% for arac, label, base in [('otomobil', tx('turbo_otomobil'), 700), ('suv', tx('turbo_suv'), 800), ('panelvan', tx('turbo_panelvan'), 800)] %}
-    <div class="turbo-card">
-      <div class="turbo-card-title">🚿 {{ label }} <span>{{ base }} TL</span></div>
-      <div class="turbo-btns">
-        <form method="post" action="{{ url_for('turbo_yikama') }}">
-          <input type="hidden" name="arac" value="{{ arac }}"><input type="hidden" name="odeme" value="nakit">
-          <button type="submit" class="btn btn-primary turbo-btn">{{ tx('cash') }} · {{ base - 100 }} TL</button>
-        </form>
-        <form method="post" action="{{ url_for('turbo_yikama') }}">
-          <input type="hidden" name="arac" value="{{ arac }}"><input type="hidden" name="odeme" value="kart">
-          <button type="submit" class="btn btn-ghost turbo-btn">{{ tx('card') }} · {{ base }} TL</button>
-        </form>
-      </div>
-    </div>
-    {% endfor %}
-  </section>
   {% endif %}
 
   {% if tab == 'analytics' %}

@@ -8,7 +8,6 @@ from flask import Flask, jsonify, redirect, render_template, request, session, u
 
 import storage as s
 from i18n import t
-import turbo as tb
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "harcama-notu-local-change-me")
@@ -165,22 +164,6 @@ def theme_kaydet():
     if d.get("tema"):
         s.ayar_set("tema", d["tema"])
     return jsonify(ok=True)
-
-
-@app.post("/turbo/yikama")
-@pin_gerekli
-def turbo_yikama():
-    arac = request.form.get("arac", "otomobil")
-    odeme = request.form.get("odeme", "kart")
-    if arac not in tb.FIYATLAR:
-        arac = "otomobil"
-    if odeme not in ("nakit", "kart"):
-        odeme = "kart"
-    lang = _lang()
-    tutar = tb.yikama_fiyat(arac, odeme)
-    s.ekle(tb.yikama_aciklama(arac, odeme, lang), tutar, "ulasim",
-           note="Turbo", tip="gider", odeme=odeme)
-    return _redirect("msg_added", tab="turbo")
 
 
 @app.post("/ekle")
