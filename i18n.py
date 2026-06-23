@@ -1,7 +1,7 @@
 KATEGORILER = ["yemek", "ulasim", "eglence", "konut", "saglik", "diger"]
 
 TR = {
-    "title": "Harcama Notu", "tab_home": "Ana", "tab_analytics": "Analiz", "tab_more": "Daha",
+    "title": "Harcama Notu", "tab_home": "Ana", "tab_analytics": "Analiz", "tab_turbo": "Turbo", "tab_more": "Daha",
     "month_expense": "Gider", "month_income": "Gelir", "net_balance": "Net", "today": "Bugün",
     "budget": "Aylık bütçe", "week_budget": "Haftalık bütçe", "savings_goal": "Tasarruf hedefi",
     "budget_over": "Aşıldı!", "budget_left": "Kalan", "budget_used": "kullanıldı",
@@ -26,6 +26,8 @@ TR = {
     "emoji_custom": "Kategori emojisi", "templates": "Hızlı şablonlar", "template_add": "Şablon ekle",
     "badges": "Rozetler", "streak": "Seri", "days": "gün", "voice": "Sesle yaz",
     "offline_ok": "Çevrimdışı destekli", "more": "Diğer",
+    "turbo_title": "Turbo — Dış yıkama", "turbo_otomobil": "Otomobil", "turbo_suv": "SUV",
+    "turbo_panelvan": "Ticari Panelvan", "turbo_cash_disc": "Nakit −100 TL",
     "msg_added": "Eklendi.", "msg_updated": "Güncellendi.", "msg_deleted": "Silindi.",
     "msg_saved": "Kaydedildi.", "msg_restored": "Yedek yüklendi.", "invalid_amount": "Geçersiz tutar.",
     "not_found": "Bulunamadı.", "choose_file": "Dosya seç",
@@ -34,7 +36,7 @@ TR = {
 }
 
 EN = {k: v for k, v in {
-    "title": "Expense Tracker", "tab_home": "Home", "tab_analytics": "Analytics", "tab_more": "More",
+    "title": "Expense Tracker", "tab_home": "Home", "tab_analytics": "Analytics", "tab_turbo": "Turbo", "tab_more": "More",
     "month_expense": "Expense", "month_income": "Income", "net_balance": "Net", "today": "Today",
     "budget": "Monthly budget", "week_budget": "Weekly budget", "savings_goal": "Savings goal",
     "budget_over": "Over!", "budget_left": "Left", "budget_used": "used",
@@ -59,6 +61,8 @@ EN = {k: v for k, v in {
     "emoji_custom": "Category emoji", "templates": "Quick templates", "template_add": "Add template",
     "badges": "Badges", "streak": "Streak", "days": "days", "voice": "Voice input",
     "offline_ok": "Offline ready", "more": "More",
+    "turbo_title": "Turbo — Exterior wash", "turbo_otomobil": "Car", "turbo_suv": "SUV",
+    "turbo_panelvan": "Commercial van", "turbo_cash_disc": "Cash −100 TL",
     "msg_added": "Added.", "msg_updated": "Updated.", "msg_deleted": "Deleted.",
     "msg_saved": "Saved.", "msg_restored": "Restored.", "invalid_amount": "Invalid amount.",
     "not_found": "Not found.", "choose_file": "Choose file",
