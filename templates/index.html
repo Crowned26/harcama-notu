@@ -62,7 +62,17 @@
     {% endif %}
   </div>
 
+  <section class="panel">
+    <p class="panel-title">{{ tx('last_7_days') }}</p>
+    <div class="trend trend-mini">{% for d in gunluk %}<div class="trend-col"><div class="trend-bar trend-bar-mini" style="height:{{ (d.gider/gunluk_max*100)|int if gunluk_max else 0 }}%"></div><span>{{ d.gun }}</span></div>{% endfor %}</div>
+  </section>
+
   {% if rozetler %}<div class="chips">{% for r in rozetler %}<span class="chip">{{ tx('badge_' + r) if tx('badge_' + r) != 'badge_' + r else r }}</span>{% endfor %}</div>{% endif %}
+
+  {% if sablonlar %}
+  <p class="section-label">{{ tx('templates') }}</p>
+  <div class="chips">{% for s in sablonlar %}<form method="post" action="{{ url_for('ekle_form') }}"><input type="hidden" name="aciklama" value="{{ s.aciklama }}"><input type="hidden" name="tutar" value="{{ s.tutar }}"><input type="hidden" name="kategori" value="{{ s.kategori }}"><button type="submit" class="chip">{{ s.aciklama }} · {{ '%.0f'|format(s.tutar) }}</button></form>{% endfor %}</div>
+  {% endif %}
 
   {% if favoriler %}
   <p class="section-label">{{ tx('favorites') }}</p>
@@ -71,7 +81,7 @@
 
   {% if son %}<form method="post" action="{{ url_for('tekrar_son') }}"><button class="btn btn-ghost btn-sm" type="submit">{{ tx('repeat_last') }}: {{ son.aciklama }}</button></form>{% endif %}
 
-  <section class="panel">
+  <section class="panel" id="add">
     <p class="panel-title">{{ tx('edit') if duzenle else tx('add') }}</p>
     <form method="post" action="{{ url_for('guncelle_form', kid=duzenle.id) if duzenle else url_for('ekle_form') }}">
       <div class="grid">
@@ -106,11 +116,16 @@
       </article>{% endfor %}</div>
     {% else %}<p class="empty">{{ tx('empty') }}</p>{% endif %}
   </section>
-  <a href="#add" class="fab">+</a>
+  <a href="#add" class="fab" title="{{ tx('add') }}">+</a>
   {% endif %}
 
   {% if tab == 'analytics' %}
   <section class="panel">
+    <p class="panel-title">{{ tx('month_compare') }}</p>
+    <div class="compare-bars">
+      <div class="compare-row"><span>{{ ay_adlari[ay_cift.gecen_ay] }}</span><div class="compare-bar"><span style="width:{{ (ay_cift.gecen_gider / ay_cift_max * 100)|int }}%"></span></div><strong>{{ '%.0f'|format(ay_cift.gecen_gider) }}</strong></div>
+      <div class="compare-row"><span>{{ ay_adlari[ay_cift.bu_ay] }}</span><div class="compare-bar"><span class="current" style="width:{{ (ay_cift.bu_gider / ay_cift_max * 100)|int }}%"></span></div><strong>{{ '%.0f'|format(ay_cift.bu_gider) }}</strong></div>
+    </div>
     <p class="panel-title">{{ tx('trend') }}</p>
     <div class="trend">{% for t in trend %}<div class="trend-col"><div class="trend-bar" style="height:{{ (t.gider/trend_max*100)|int }}%"></div><span>{{ ay_adlari[t.ay] }}</span></div>{% endfor %}</div>
     {% if chart %}<p class="panel-title">{{ tx('chart') }}</p><div class="chart">{% for c,v in chart.items() %}<span style="width:{{ v*100/chart_total }}%;background:{{ chart_renk[c] }}"></span>{% endfor %}</div>{% endif %}
@@ -146,6 +161,8 @@
         <div><label>{{ tx('pin_set') }}</label><input name="pin_yeni" type="password" placeholder="4-8 hane"></div>
         <div><label>{{ tx('custom_cat') }}</label><input name="ozel_kat"><input name="ozel_emoji" placeholder="emoji"></div>
         <div><label>{{ tx('cat_limit') }}</label><select name="limit_kat">{% for c in kategoriler %}<option value="{{ c }}">{{ tx(c) }}</option>{% endfor %}</select><input name="limit_val" type="number"></div>
+        <div><label>{{ tx('emoji_custom') }}</label><select name="emoji_kat">{% for c in kategoriler %}<option value="{{ c }}">{{ emoji.get(c) }} {{ tx(c) }}</option>{% endfor %}</select><input name="emoji_val" placeholder="emoji" maxlength="4"></div>
+        <div class="full"><label>{{ tx('template_add') }}</label><input name="sablon_aciklama" placeholder="{{ tx('desc') }}"><input name="sablon_tutar" type="number" step="0.01" placeholder="{{ tx('amount') }}"><select name="sablon_kat">{% for c in kategoriler %}<option value="{{ c }}">{{ tx(c) }}</option>{% endfor %}</select></div>
         <div><label>{{ tx('theme') }}</label><select name="tema">{% for t in temalar %}<option value="{{ t }}" {{ 'selected' if tema==t }}>{{ t }}</option>{% endfor %}</select></div>
       </div>
       <div class="actions"><button class="btn btn-primary btn-sm" type="submit">{{ tx('save') }}</button></div>
@@ -154,6 +171,7 @@
       <a class="btn btn-ghost btn-sm" href="{{ url_for('csv_indir') }}">{{ tx('export_csv') }}</a>
       <a class="btn btn-ghost btn-sm" href="{{ url_for('yedek_indir') }}">{{ tx('backup') }}</a>
       <a class="btn btn-ghost btn-sm" href="{{ url_for('rapor') }}" target="_blank">{{ tx('report') }}</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('pdf_indir') }}">{{ tx('pdf_export') }}</a>
     </div>
     <form method="post" action="{{ url_for('yedek_yukle') }}" enctype="multipart/form-data" class="file-wrap"><input type="file" name="dosya" accept=".json" required><button class="btn btn-ghost btn-sm" type="submit">{{ tx('restore') }}</button></form>
     <p class="section-label">{{ tx('offline_ok') }}</p>

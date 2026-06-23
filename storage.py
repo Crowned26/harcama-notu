@@ -358,6 +358,90 @@ def kategori_dagilimi(yil, ay):
     return d
 
 
+def gunluk_trend(gun=7):
+    now = datetime.now()
+    out = []
+    for i in range(gun - 1, -1, -1):
+        d = now - timedelta(days=i)
+        bas = d.replace(hour=0, minute=0, second=0, microsecond=0)
+        bit = d.replace(hour=23, minute=59, second=59, microsecond=0)
+        g, gi = donem_toplam(yukle(), bas, bit)
+        out.append({"gun": d.strftime("%d.%m"), "gider": g, "gelir": gi})
+    return out
+
+
+def ay_cift_karsilastir(yil, ay):
+    g1, _ = ay_toplam(yil=yil, ay=ay)
+    if ay == 1:
+        g2, _ = ay_toplam(yil=yil - 1, ay=12)
+        pa = 12
+        py = yil - 1
+    else:
+        g2, _ = ay_toplam(yil=yil, ay=ay - 1)
+        pa, py = ay - 1, yil
+    return {"bu_ay": ay, "bu_yil": yil, "bu_gider": g1, "gecen_ay": pa, "gecen_yil": py, "gecen_gider": g2}
+
+
+def tum_emoji_map():
+    m = dict(KATEGORI_EMOJI)
+    custom = ayar_get("kat_emoji", {})
+    if isinstance(custom, dict):
+        m.update(custom)
+    init_db()
+    with conn() as c:
+        for r in c.execute("SELECT ad, emoji FROM ozel_kategoriler"):
+            m[r["ad"]] = r["emoji"]
+    return m
+
+
+def kategori_emoji_kaydet(kategori, emoji):
+    m = ayar_get("kat_emoji", {})
+    if not isinstance(m, dict):
+        m = {}
+    m[kategori] = emoji.strip() or KATEGORI_EMOJI.get(kategori, "📦")
+    ayar_set("kat_emoji", m)
+
+
+def sablon_listesi():
+    return ayar_get("sablonlar", []) or []
+
+
+def sablon_ekle(aciklama, tutar, kategori="diger"):
+    lst = sablon_listesi()
+    lst.append({"aciklama": aciklama.strip(), "tutar": round(float(tutar), 2), "kategori": kategori})
+    ayar_set("sablonlar", lst[-20:])
+
+
+def sablon_sil(idx):
+    lst = sablon_listesi()
+    if 0 <= idx < len(lst):
+        lst.pop(idx)
+        ayar_set("sablonlar", lst)
+
+
+def pdf_rapor_bytes(lang="tr"):
+    from fpdf import FPDF
+    now = datetime.now()
+    g, gi = ay_toplam(yil=now.year, ay=now.month)
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 16)
+    title = "Expense Report" if lang == "en" else "Harcama Raporu"
+    pdf.cell(0, 12, f"{title} - {now.strftime('%Y-%m')}", ln=True)
+    pdf.set_font("Helvetica", size=11)
+    pdf.cell(0, 8, f"Gider / Expense: {g:.2f} TL", ln=True)
+    pdf.cell(0, 8, f"Gelir / Income: {gi:.2f} TL", ln=True)
+    pdf.cell(0, 8, f"Net: {gi - g:.2f} TL", ln=True)
+    pdf.ln(4)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 8, "Son kayitlar / Recent:", ln=True)
+    pdf.set_font("Helvetica", size=10)
+    for k in reversed(yukle()[-30:]):
+        line = f"{k['tarih'][:10]}  {k['aciklama'][:30]}  {k['tutar']:.2f} TL"
+        pdf.cell(0, 6, line.encode("latin-1", "replace").decode("latin-1"), ln=True)
+    return pdf.output()
+
+
 def aylik_trend(n=6):
     now = datetime.now()
     y, m = now.year, now.month

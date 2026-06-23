@@ -92,6 +92,10 @@ def _ctx(lang, **extra):
     net = gelir - gider
     butce_kalan = butce - gider if butce > 0 else 0
     hafta_kalan = hafta_butce - hg if hafta_butce > 0 else 0
+    gunluk = s.gunluk_trend(7)
+    gunluk_max = max((x["gider"] for x in gunluk), default=1) or 1
+    ay_cift = s.ay_cift_karsilastir(sel_yil, sel_ay or datetime.now().month)
+    emoji_map = s.tum_emoji_map()
     trend = s.aylik_trend(6)
     trend_max = max((max(x["gider"], x["gelir"]) for x in trend), default=1) or 1
     chart_total = sum(chart.values()) or 1
@@ -102,7 +106,7 @@ def _ctx(lang, **extra):
     return dict(
         lang=lang, tx=tx, tab=tab, karanlik=bool(s.ayar_get("karanlik")),
         tema=s.ayar_get("tema", "indigo"), temalar=TEMAS,
-        kategoriler=s.tum_kategoriler(), emoji=s.KATEGORI_EMOJI,
+        kategoriler=s.tum_kategoriler(), emoji=emoji_map,
         kayitlar=filtre, q=q, kat=kat, tip_f=tip_f, sort=sort,
         sort_opts={"date_desc": tx("sort_date_desc"), "date_asc": tx("sort_date_asc"),
                    "amount_desc": tx("sort_amount_desc"), "amount_asc": tx("sort_amount_asc")},
@@ -114,7 +118,9 @@ def _ctx(lang, **extra):
         hafta_butce=hafta_butce, hafta_kalan=hafta_kalan, hafta_asildi=hafta_butce > 0 and hg > hafta_butce,
         tasarruf=tasarruf, karsilastirma=karsilastirma, ort_gun=ort_gun,
         chart=chart, chart_total=chart_total, chart_renk=CHART_RENK,
-        trend=trend, trend_max=trend_max,
+        trend=trend, trend_max=trend_max, gunluk=gunluk, gunluk_max=gunluk_max,
+        ay_cift=ay_cift, ay_cift_max=max(ay_cift["bu_gider"], ay_cift["gecen_gider"], 1),
+        sablonlar=s.sablon_listesi(),
         top10=s.en_pahali(10, sel_yil, sel_ay), aliskanliklar=s.aliskanliklar(),
         heatmap=s.heatmap(sel_yil), limit_asim=s.kategori_limit_asimi(sel_yil, sel_ay or datetime.now().month),
         hizli=s.hizli_ekle_listesi(), favoriler=s.favori_listesi(), son=s.son_kayit(),
@@ -277,6 +283,14 @@ def ayarlar_kaydet():
         s.ozel_kategori_ekle(request.form["ozel_kat"], request.form.get("ozel_emoji", "📌"))
     if request.form.get("limit_kat") and request.form.get("limit_val"):
         s.kategori_limit_kaydet(request.form["limit_kat"], float(request.form["limit_val"]))
+    if request.form.get("emoji_kat") and request.form.get("emoji_val"):
+        s.kategori_emoji_kaydet(request.form["emoji_kat"], request.form["emoji_val"])
+    if request.form.get("sablon_aciklama") and request.form.get("sablon_tutar"):
+        try:
+            s.sablon_ekle(request.form["sablon_aciklama"], _parse_amount(request.form["sablon_tutar"]),
+                          request.form.get("sablon_kat", "diger"))
+        except ValueError:
+            pass
     return _redirect("msg_saved")
 
 
@@ -300,6 +314,21 @@ def yedek_yukle():
     if f:
         s.yedek_yukle(json.loads(f.read().decode()))
     return _redirect("msg_restored")
+
+
+@app.get("/pdf")
+@pin_gerekli
+def pdf_indir():
+    data = s.pdf_rapor_bytes(_lang())
+    return Response(data, mimetype="application/pdf",
+                    headers={"Content-Disposition": "attachment; filename=rapor.pdf"})
+
+
+@app.post("/sablon/<int:idx>/sil")
+@pin_gerekli
+def sablon_sil(idx):
+    s.sablon_sil(idx)
+    return _redirect("msg_deleted")
 
 
 @app.get("/rapor")
