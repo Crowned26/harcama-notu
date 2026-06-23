@@ -439,7 +439,7 @@ def pdf_rapor_bytes(lang="tr"):
     for k in reversed(yukle()[-30:]):
         line = f"{k['tarih'][:10]}  {k['aciklama'][:30]}  {k['tutar']:.2f} TL"
         pdf.cell(0, 6, line.encode("latin-1", "replace").decode("latin-1"), ln=True)
-    return pdf.output()
+    return bytes(pdf.output(dest="S"))
 
 
 def aylik_trend(n=6):

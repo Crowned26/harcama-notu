@@ -45,12 +45,10 @@ def _filtre_params():
 def _redirect(msg, **extra):
     ay, yil, tum = _filtre_params()
     p = {"msg": msg, "lang": _lang()}
-    if ay == "":
-        p["ay"] = ""
-    elif ay:
-        p["ay"], p["yil"] = ay, yil
+    if tum or not ay:
+        p["ay"], p["yil"] = str(datetime.now().month), yil or str(datetime.now().year)
     else:
-        p["ay"], p["yil"] = str(datetime.now().month), yil
+        p["ay"], p["yil"] = ay, yil
     p.update(extra)
     return redirect(url_for("ana", **{k: v for k, v in p.items() if v is not None}))
 
