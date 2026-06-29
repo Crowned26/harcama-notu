@@ -275,7 +275,15 @@
     }
     if (!aciklama) aciklama = "Fiş";
 
-    return { tarih: tarih, tutar: tutar, aciklama: aciklama };
+    return { tarih: tarih, tutar: tutar, aciklama: aciklama, odeme: pickOdeme(text) };
+  }
+
+  function pickOdeme(text) {
+    var t = ocrFix(text);
+    if (/KRED[Iİ]|BANKA\s*KART|POS\b|VISA|MASTER/i.test(t)) return "kart";
+    if (/HAVALE|EFT/i.test(t)) return "banka";
+    if (/NAK[Iİ]T/i.test(t)) return "nakit";
+    return null;
   }
 
   function mergeTexts(texts) {
@@ -332,10 +340,12 @@
     var tutar = document.querySelector("[name=tutar]");
     var tarih = document.getElementById("tarihInp");
     var tip = document.querySelector("[name=tip]");
+    var odeme = document.getElementById("odemeSel") || document.querySelector("[name=odeme]");
     if (aciklama && data.aciklama) aciklama.value = data.aciklama;
     if (tutar && data.tutar) tutar.value = data.tutar.toFixed(2);
     if (tarih && data.tarih) tarih.value = data.tarih;
     if (tip) tip.value = "gider";
+    if (odeme && data.odeme) odeme.value = data.odeme;
     if (tutar) tutar.dispatchEvent(new Event("input"));
     document.getElementById("add").scrollIntoView({ behavior: "smooth", block: "start" });
   }

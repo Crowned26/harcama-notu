@@ -59,6 +59,12 @@ class TestStorage(unittest.TestCase):
         k = s.yukle()[0]
         self.assertTrue(k["tarih"].startswith("2024-03-15"))
 
+    def test_guncelle_tarih(self):
+        s.ekle("test", 10)
+        s.guncelle(1, tarih="2022-05-20 14:30")
+        k = s.get_kayit(1)
+        self.assertTrue(k["tarih"].startswith("2022-05-20"))
+
 
 if __name__ == "__main__":
     unittest.main()

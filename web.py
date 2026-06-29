@@ -130,6 +130,7 @@ def _ctx(lang, **extra):
         usd=usd, eur=eur,
         hatirlatma=int(s.ayar_get("hatirlatma", 0) or 0),
         pin_var=s.pin_var_mi(), basari=tx(msg) if msg else None, hata=extra.get("hata"),
+        cloud_host=bool(os.environ.get("RENDER")),
     )
 
 
@@ -208,9 +209,18 @@ def tekrar_son():
 @pin_gerekli
 def guncelle_form(kid):
     try:
+        tarih = request.form.get("tarih", "").strip() or None
+        ts = None
+        if tarih and len(tarih) >= 10:
+            mevcut = s.get_kayit(kid) or {}
+            saat = "12:00"
+            if mevcut.get("tarih") and len(mevcut["tarih"]) > 11:
+                saat = mevcut["tarih"][11:16]
+            ts = tarih[:10] + " " + saat
         s.guncelle(kid, aciklama=request.form["aciklama"].strip(), tutar=_parse_amount(request.form["tutar"]),
                    kategori=request.form.get("kategori"), note=request.form.get("not", ""),
-                   tip=request.form.get("tip"), odeme=request.form.get("odeme"), konum=request.form.get("konum", ""))
+                   tip=request.form.get("tip"), odeme=request.form.get("odeme"), konum=request.form.get("konum", ""),
+                   tarih=ts)
     except (ValueError, KeyError):
         return render_template("index.html", **_ctx(_lang(), hata=t(_lang(), "invalid_amount")))
     return _redirect("msg_updated")

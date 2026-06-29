@@ -262,6 +262,14 @@ input:focus, select:focus {
 .fis-warn { border-color: #f59e0b; color: #d97706; }
 html.dark .fis-ok { color: #4ade80; }
 html.dark .fis-warn { color: #fbbf24; }
+
+.cloud-tip {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 0.85rem; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px;
+  background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: #b45309;
+}
+html.dark .cloud-tip { color: #fbbf24; }
+.item-doviz { display: block; font-size: 0.75rem; opacity: 0.75; font-weight: normal; }
 .item-actions { display: flex; gap: 6px; margin-top: 8px; }
 
 .list { display: flex; flex-direction: column; gap: 10px; }

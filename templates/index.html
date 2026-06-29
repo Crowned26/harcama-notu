@@ -34,6 +34,13 @@
 
   {% if basari %}<div class="toast">{{ basari }}</div>{% endif %}
   {% if hata %}<div class="flash">{{ hata }}</div>{% endif %}
+  {% if cloud_host %}
+  <div class="cloud-tip" id="cloudTip" hidden>
+    <span>{{ tx('backup_tip') }}</span>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('yedek_indir') }}">{{ tx('backup_tip_link') }}</a>
+    <button type="button" class="btn btn-ghost btn-sm" id="cloudTipClose">×</button>
+  </div>
+  {% endif %}
 
   <form method="get" class="panel toolbar">
     <input type="hidden" name="lang" value="{{ lang }}"><input type="hidden" name="tab" value="{{ tab }}">
@@ -91,12 +98,21 @@
       <div class="grid">
         <div class="full"><label>{{ tx('desc') }}</label><input name="aciklama" value="{{ duzenle.aciklama if duzenle else '' }}" required></div>
         <div><label>{{ tx('amount') }}</label><input name="tutar" type="number" step="0.01" value="{{ duzenle.tutar if duzenle else '' }}" required></div>
-        {% if not duzenle %}<div><label>{{ tx('date') }}</label><input name="tarih" type="date" id="tarihInp"></div>{% endif %}
-        <div><label>{{ tx('currency') }}</label><select name="doviz" id="dovizSel"><option value="TRY">TRY</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
+        <div><label>{{ tx('date') }}</label><input name="tarih" type="date" id="tarihInp" value="{{ duzenle.tarih[:10] if duzenle else '' }}"></div>
+        <div><label>{{ tx('currency') }}</label><select name="doviz" id="dovizSel">
+          {% for dv in ['TRY','USD','EUR'] %}<option value="{{ dv }}" {{ 'selected' if duzenle and duzenle.doviz==dv else '' }}>{{ dv }}</option>{% endfor %}
+        </select></div>
         <div class="full" id="kurOnizleme" hidden><p class="item-meta" id="kurMetin"></p></div>
-        <div><label>{{ tx('type') }}</label><select name="tip"><option value="gider">{{ tx('expense') }}</option><option value="gelir">{{ tx('income') }}</option></select></div>
-        <div><label>{{ tx('category') }}</label><select name="kategori">{% for c in kategoriler %}<option value="{{ c }}">{{ tx(c) }}</option>{% endfor %}</select></div>
-        <div><label>{{ tx('payment') }}</label><select name="odeme"><option value="nakit">{{ tx('cash') }}</option><option value="kart">{{ tx('card') }}</option><option value="banka">{{ tx('bank') }}</option></select></div>
+        <div><label>{{ tx('type') }}</label><select name="tip">
+          <option value="gider" {{ 'selected' if duzenle and duzenle.tip=='gider' else '' }}>{{ tx('expense') }}</option>
+          <option value="gelir" {{ 'selected' if duzenle and duzenle.tip=='gelir' else '' }}>{{ tx('income') }}</option>
+        </select></div>
+        <div><label>{{ tx('category') }}</label><select name="kategori">{% for c in kategoriler %}<option value="{{ c }}" {{ 'selected' if duzenle and duzenle.kategori==c else '' }}>{{ tx(c) }}</option>{% endfor %}</select></div>
+        <div><label>{{ tx('payment') }}</label><select name="odeme" id="odemeSel">
+          <option value="nakit" {{ 'selected' if duzenle and duzenle.odeme=='nakit' else '' }}>{{ tx('cash') }}</option>
+          <option value="kart" {{ 'selected' if duzenle and duzenle.odeme=='kart' else '' }}>{{ tx('card') }}</option>
+          <option value="banka" {{ 'selected' if duzenle and duzenle.odeme=='banka' else '' }}>{{ tx('bank') }}</option>
+        </select></div>
         <div><label>{{ tx('location') }}</label><input name="konum" value="{{ duzenle.konum if duzenle else '' }}"></div>
         <div><label>{{ tx('split') }}</label><input name="bolen" type="number" min="1" value="{{ duzenle.bolen if duzenle else 1 }}"></div>
         <div><label>{{ tx('installment') }}</label><input name="taksit" type="number" min="1"></div>
@@ -120,7 +136,8 @@
       <article class="item">
         <div class="item-left"><div class="item-title">{{ emoji.get(k.kategori,'📦') }} {{ k.aciklama }}</div>
           <div class="item-meta"><span class="tag">{{ tx(k.kategori|default('diger')) }}</span> {{ k.odeme|default('nakit') }} · {{ k.tarih[5:16] }}{% if k.bolen and k.bolen>1 %} · ÷{{ k.bolen }}{% endif %}</div></div>
-        <div><div class="item-amount {{ 'income' if k.tip=='gelir' else 'expense' }}">{{ '%.2f'|format(k.tutar) }}</div>
+        <div><div class="item-amount {{ 'income' if k.tip=='gelir' else 'expense' }}">{{ '%.2f'|format(k.tutar) }} TL
+          {% if k.doviz and k.doviz != 'TRY' and k.doviz_tutar %}<small class="item-doviz">{{ '%.2f'|format(k.doviz_tutar) }} {{ k.doviz }}</small>{% endif %}</div>
           <div class="item-actions"><a class="btn btn-ghost btn-sm" href="?edit={{ k.id }}&tab=home&lang={{ lang }}">{{ tx('edit') }}</a>
             <form method="post" action="{{ url_for('sil_form', kid=k.id) }}" onsubmit="return confirm('{{ tx('confirm_delete') }}')"><button class="btn btn-ghost btn-sm btn-danger" type="submit">{{ tx('delete') }}</button></form></div></div>
       </article>{% endfor %}</div>
@@ -193,6 +210,14 @@
     if (el && !el.value) {
       var n = new Date();
       el.value = n.getFullYear() + "-" + String(n.getMonth() + 1).padStart(2, "0") + "-" + String(n.getDate()).padStart(2, "0");
+    }
+    var tip = document.getElementById("cloudTip");
+    if (tip && !localStorage.getItem("hn_backup_tip")) {
+      tip.hidden = false;
+      document.getElementById("cloudTipClose").onclick = function () {
+        tip.hidden = true;
+        localStorage.setItem("hn_backup_tip", "1");
+      };
     }
   })();
 </script>
