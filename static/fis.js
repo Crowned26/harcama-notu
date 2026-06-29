@@ -132,6 +132,8 @@
       }
     }
 
+    var variants = [];
+
     function addVariant(grayBuf, invert) {
       var c = document.createElement("canvas");
       c.width = cw; c.height = ch;
@@ -154,10 +156,11 @@
   }
 
   function extractAmounts(line) {
+    var norm = String(line).replace(/#/g, "*").replace(/(\d)\s+(\d)/g, "$1$2");
     var out = [];
     var re = /\*?\s*\d{1,3}(?:\.\d{3})*,\d{2}|\*?\s*\d+[.,]\d{2}/g;
     var m;
-    while ((m = re.exec(line))) {
+    while ((m = re.exec(norm))) {
       var v = parseTrAmount(m[0]);
       if (!isNaN(v) && v > 0 && v < 1000000) out.push(v);
     }
@@ -166,8 +169,52 @@
 
   function dateFromParts(d, mo, y) {
     if (y < 100) y += 2000;
+    if (y > 2100 && y < 3000) y = 2000 + (y % 100);
     if (d < 1 || d > 31 || mo < 1 || mo > 12 || y < 2000 || y > 2100) return null;
     return y + "-" + String(mo).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+  }
+
+  function isTarLine(line) {
+    return /TAR\w{0,3}H|DATE/i.test(ocrFix(line));
+  }
+
+  function pickTarih(text, lines) {
+    var candidates = [];
+    function add(dt, score) {
+      if (dt) candidates.push({ dt: dt, score: score });
+    }
+
+    for (var i = 0; i < lines.length; i++) {
+      if (isTarLine(lines[i])) {
+        add(parseDateFromLine(lines[i]), 40);
+        if (i + 1 < lines.length) add(parseDateFromLine(lines[i + 1]), 35);
+        if (i + 2 < lines.length) add(parseDateFromLine(lines[i + 2]), 30);
+      }
+    }
+
+    var near = ocrFix(text).match(/TAR\w{0,3}H\s*:?\s*(\d{1,2})\s*[./\-]\s*(\d{1,2})\s*[./\-]\s*(\d{2,4})/i);
+    if (near) add(dateFromParts(parseInt(near[1], 10), parseInt(near[2], 10), parseInt(near[3], 10)), 38);
+
+    for (var j = 0; j < Math.min(lines.length, 22); j++) {
+      var ln = lines[j].trim();
+      if (ln.length <= 14 && /^\d{1,2}[./\-]\d{1,2}[./\-]\d{2,4}$/.test(ocrFix(ln).replace(/\s/g, ""))) {
+        add(parseDateFromLine(ln), 25);
+      }
+    }
+
+    var re = /(\d{1,2})\s*[./\-]\s*(\d{1,2})\s*[./\-]\s*(\d{2,4})/g;
+    var m, fixed = ocrFix(text);
+    while ((m = re.exec(fixed))) {
+      var dt = dateFromParts(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10));
+      if (dt) {
+        var y = parseInt(dt.slice(0, 4), 10);
+        add(dt, y >= 2015 && y <= 2030 ? 12 : 3);
+      }
+    }
+
+    if (!candidates.length) return null;
+    candidates.sort(function (a, b) { return b.score - a.score; });
+    return candidates[0].dt;
   }
 
   function parseDateFromLine(line) {
@@ -181,35 +228,10 @@
 
   function parseFisText(text) {
     var lines = text.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
-    var fixed = ocrFix(text);
-    var tarih = null;
-
-    for (var i = 0; i < lines.length; i++) {
-      if (/TAR[Iİ1L]H|DATE/i.test(ocrFix(lines[i]))) {
-        tarih = parseDateFromLine(lines[i]);
-        if (!tarih && i + 1 < lines.length) tarih = parseDateFromLine(lines[i + 1]);
-        if (!tarih && i + 2 < lines.length) tarih = parseDateFromLine(lines[i + 2]);
-        if (tarih) break;
-      }
-    }
-
-    if (!tarih) {
-      var near = fixed.match(/TAR[Iİ1L]H\s*:?\s*(\d{1,2})\s*[./\-]\s*(\d{1,2})\s*[./\-]\s*(\d{2,4})/i);
-      if (near) tarih = dateFromParts(parseInt(near[1], 10), parseInt(near[2], 10), parseInt(near[3], 10));
-    }
-
-    if (!tarih) {
-      var re = /(\d{1,2})\s*[./\-]\s*(\d{1,2})\s*[./\-]\s*(\d{2,4})/g;
-      var m, found = [];
-      while ((m = re.exec(fixed))) {
-        var dt = dateFromParts(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10));
-        if (dt) found.push(dt);
-      }
-      if (found.length) tarih = found[0];
-    }
+    var tarih = pickTarih(text, lines);
 
     var totalKeys = /GENEL\s*TOPLAM|^TOPLAM|ÖDENECEK|ODENECEK|NET\s*TUTAR|TAHS[Iİ]L|KRED[Iİ]|NAK[Iİ]T/i;
-    var skipTotal = /TOPKDV|KDV\s*TOP|Kg\s*X|X\s*\d/i;
+    var skipTotal = /TOPKDV|TOPKD[^A]|KDV\s*TOP|Kg\s*X|X\s*\d/i;
     var tutar = null;
     var candidates = [];
     for (var j = 0; j < lines.length; j++) {
