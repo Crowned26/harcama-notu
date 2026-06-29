@@ -8,6 +8,7 @@ from flask import Flask, jsonify, redirect, render_template, request, session, u
 
 import storage as s
 from i18n import t
+from kur import canli_kurlar
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "harcama-notu-local-change-me")
@@ -101,6 +102,7 @@ def _ctx(lang, **extra):
     tx = _tx(lang)
     ay_ad = AY_EN if lang == "en" else AY_TR
     msg = request.args.get("msg")
+    usd, eur = canli_kurlar()
     return dict(
         lang=lang, tx=tx, tab=tab, karanlik=bool(s.ayar_get("karanlik")),
         tema=s.ayar_get("tema", "indigo"), temalar=TEMAS,
@@ -125,7 +127,7 @@ def _ctx(lang, **extra):
         tekrarlayan=s.tekrarlayan_listesi(), borclar=s.borc_listesi(),
         rozetler=s.rozetler(), streak=int(s.ayar_get("streak", 0)),
         duzenle=s.get_kayit(edit_id) if edit_id else None,
-        usd=s.ayar_get("usd_kur", 34), eur=s.ayar_get("eur_kur", 37),
+        usd=usd, eur=eur,
         hatirlatma=int(s.ayar_get("hatirlatma", 0) or 0),
         pin_var=s.pin_var_mi(), basari=tx(msg) if msg else None, hata=extra.get("hata"),
     )
@@ -164,6 +166,12 @@ def theme_kaydet():
     if d.get("tema"):
         s.ayar_set("tema", d["tema"])
     return jsonify(ok=True)
+
+
+@app.get("/api/kurlar")
+def api_kurlar():
+    usd, eur = canli_kurlar()
+    return jsonify(usd=usd, eur=eur)
 
 
 @app.post("/ekle")
@@ -270,7 +278,7 @@ def tekrar_sil(tid):
 @app.post("/ayarlar")
 @pin_gerekli
 def ayarlar_kaydet():
-    for key in ("butce", "hafta_butce", "tasarruf_hedef", "usd_kur", "eur_kur", "hatirlatma"):
+    for key in ("butce", "hafta_butce", "tasarruf_hedef", "hatirlatma"):
         if key in request.form:
             s.ayar_set(key, max(0, float(request.form.get(key, 0) or 0)))
     if request.form.get("pin_yeni"):

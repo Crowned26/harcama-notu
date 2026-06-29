@@ -179,17 +179,15 @@ def _tarih(s):
 
 def ekle(aciklama, tutar, kategori=None, note="", tip="gider", odeme="nakit", konum="",
          doviz="TRY", doviz_tutar=None, bolen=1, taksit_toplam=None, taksit_no=None, tekrar_id=None):
+    from kur import try_cevir
+
     init_db()
     if not kategori:
         kategori = otomatik_kategori(aciklama)
-    usd = float(ayar_get("usd_kur", 34))
-    eur = float(ayar_get("eur_kur", 37))
-    if doviz == "USD":
-        tutar = round(float(doviz_tutar or tutar) * usd, 2)
-    elif doviz == "EUR":
-        tutar = round(float(doviz_tutar or tutar) * eur, 2)
-    else:
-        tutar = round(float(tutar), 2)
+    kaynak = float(doviz_tutar or tutar)
+    tutar = try_cevir(kaynak, doviz)
+    if doviz != "TRY":
+        doviz_tutar = kaynak
     with conn() as c:
         c.execute("""INSERT INTO kayitlar
             (tarih,aciklama,tutar,kategori,notes,tip,odeme,konum,doviz,doviz_tutar,bolen,taksit_toplam,taksit_no,tekrar_id)

@@ -10,7 +10,7 @@
   <title>{{ tx('title') }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body data-reminder="{{ hatirlatma }}">
+<body data-reminder="{{ hatirlatma }}" data-usd="{{ usd }}" data-eur="{{ eur }}" data-approx-try="{{ tx('approx_try') }}">
 <div class="wrap">
   <header class="top">
     <div><h1>{{ tx('title') }}</h1>
@@ -87,7 +87,8 @@
       <div class="grid">
         <div class="full"><label>{{ tx('desc') }}</label><input name="aciklama" value="{{ duzenle.aciklama if duzenle else '' }}" required></div>
         <div><label>{{ tx('amount') }}</label><input name="tutar" type="number" step="0.01" value="{{ duzenle.tutar if duzenle else '' }}" required></div>
-        <div><label>{{ tx('currency') }}</label><select name="doviz"><option value="TRY">TRY</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
+        <div><label>{{ tx('currency') }}</label><select name="doviz" id="dovizSel"><option value="TRY">TRY</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
+        <div class="full" id="kurOnizleme" hidden><p class="item-meta" id="kurMetin"></p></div>
         <div><label>{{ tx('type') }}</label><select name="tip"><option value="gider">{{ tx('expense') }}</option><option value="gelir">{{ tx('income') }}</option></select></div>
         <div><label>{{ tx('category') }}</label><select name="kategori">{% for c in kategoriler %}<option value="{{ c }}">{{ tx(c) }}</option>{% endfor %}</select></div>
         <div><label>{{ tx('payment') }}</label><select name="odeme"><option value="nakit">{{ tx('cash') }}</option><option value="kart">{{ tx('card') }}</option><option value="banka">{{ tx('bank') }}</option></select></div>
@@ -155,8 +156,7 @@
         <div><label>{{ tx('budget') }}</label><input name="butce" type="number" value="{{ butce }}"></div>
         <div><label>{{ tx('week_budget') }}</label><input name="hafta_butce" type="number" value="{{ hafta_butce }}"></div>
         <div><label>{{ tx('savings_goal') }}</label><input name="tasarruf_hedef" type="number" value="{{ tasarruf }}"></div>
-        <div><label>{{ tx('usd_rate') }}</label><input name="usd_kur" value="{{ usd }}"></div>
-        <div><label>{{ tx('eur_rate') }}</label><input name="eur_kur" value="{{ eur }}"></div>
+        <div class="full"><p class="item-meta">{{ tx('live_rates') }}: 1 USD = {{ '%.2f'|format(usd) }} TL · 1 EUR = {{ '%.2f'|format(eur) }} TL</p></div>
         <div><label>{{ tx('reminder') }}</label><input name="hatirlatma" type="number" value="{{ hatirlatma }}"></div>
         <div><label>{{ tx('pin_set') }}</label><input name="pin_yeni" type="password" placeholder="4-8 hane"></div>
         <div><label>{{ tx('custom_cat') }}</label><input name="ozel_kat"><input name="ozel_emoji" placeholder="emoji"></div>
