@@ -22,10 +22,146 @@
 
   function ocrFix(s) {
     return String(s)
-      .replace(/[Ooо]/g, "0")
+      .replace(/[OoоQ]/g, "0")
       .replace(/[Il|]/g, "1")
       .replace(/Ş/g, "S").replace(/ş/g, "s")
-      .replace(/İ/g, "I").replace(/ı/g, "i");
+      .replace(/İ/g, "I").replace(/ı/g, "i")
+      .replace(/ğ/g, "g").replace(/Ğ/g, "G");
+  }
+
+  function toGray(data, w, h) {
+    var g = new Uint8Array(w * h);
+    for (var i = 0, p = 0; i < data.length; i += 4, p++) {
+      g[p] = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+    }
+    return g;
+  }
+
+  function otsuThreshold(gray) {
+    var hist = new Array(256).fill(0);
+    for (var i = 0; i < gray.length; i++) hist[gray[i]]++;
+    var total = gray.length, sum = 0;
+    for (var t = 0; t < 256; t++) sum += t * hist[t];
+    var sumB = 0, wB = 0, best = 0, th = 128;
+    for (var k = 0; k < 256; k++) {
+      wB += hist[k];
+      if (!wB) continue;
+      var wF = total - wB;
+      if (!wF) break;
+      sumB += k * hist[k];
+      var mB = sumB / wB, mF = (sum - sumB) / wF;
+      var v = wB * wF * (mB - mF) * (mB - mF);
+      if (v > best) { best = v; th = k; }
+    }
+    return th;
+  }
+
+  function findReceiptCrop(gray, w, h) {
+    var col = new Array(w).fill(0), row = new Array(h).fill(0);
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        if (gray[y * w + x] > 165) { col[x]++; row[y]++; }
+      }
+    }
+    var cTh = h * 0.08, rTh = w * 0.08;
+    var x0 = 0, x1 = w - 1, y0 = 0, y1 = h - 1;
+    for (var a = 0; a < w; a++) if (col[a] > cTh) { x0 = a; break; }
+    for (var b = w - 1; b >= 0; b--) if (col[b] > cTh) { x1 = b; break; }
+    for (var c = 0; c < h; c++) if (row[c] > rTh) { y0 = c; break; }
+    for (var d = h - 1; d >= 0; d--) if (row[d] > rTh) { y1 = d; break; }
+    var pad = Math.round(Math.min(w, h) * 0.01);
+    x0 = Math.max(0, x0 - pad);
+    y0 = Math.max(0, y0 - pad);
+    x1 = Math.min(w - 1, x1 + pad);
+    y1 = Math.min(h - 1, y1 + pad);
+    if (x1 - x0 < w * 0.2 || y1 - y0 < h * 0.2) return { x: 0, y: 0, w: w, h: h };
+    return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+  }
+
+  function putGray(ctx, gray, w, h, invert) {
+    var id = ctx.createImageData(w, h);
+    for (var i = 0, p = 0; p < gray.length; p++, i += 4) {
+      var v = invert ? (gray[p] > 128 ? 0 : 255) : gray[p];
+      id.data[i] = id.data[i + 1] = id.data[i + 2] = v;
+      id.data[i + 3] = 255;
+    }
+    ctx.putImageData(id, 0, 0);
+  }
+
+  function adaptiveBinary(gray, w, h, block, C) {
+    var out = new Uint8Array(gray.length);
+    var half = Math.floor(block / 2);
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        var sum = 0, cnt = 0;
+        for (var dy = -half; dy <= half; dy++) {
+          for (var dx = -half; dx <= half; dx++) {
+            var ny = y + dy, nx = x + dx;
+            if (ny >= 0 && ny < h && nx >= 0 && nx < w) { sum += gray[ny * w + nx]; cnt++; }
+          }
+        }
+        var mean = sum / cnt;
+        out[y * w + x] = gray[y * w + x] < mean - C ? 0 : 255;
+      }
+    }
+    return out;
+  }
+
+  function buildVariants(img) {
+    var scale = 1;
+    var minW = 2200;
+    if (img.width < minW) scale = minW / img.width;
+    if (img.height < 2800 && img.height > img.width) scale = Math.max(scale, 2800 / img.height);
+    var w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+
+    var base = document.createElement("canvas");
+    base.width = w; base.height = h;
+    var bctx = base.getContext("2d");
+    bctx.fillStyle = "#fff";
+    bctx.fillRect(0, 0, w, h);
+    bctx.drawImage(img, 0, 0, w, h);
+
+    var id = bctx.getImageData(0, 0, w, h);
+    var gray = toGray(id.data, w, h);
+    var crop = findReceiptCrop(gray, w, h);
+
+    var cw = crop.w, ch = crop.h;
+    var cropped = new Uint8Array(cw * ch);
+    for (var y = 0; y < ch; y++) {
+      for (var x = 0; x < cw; x++) {
+        cropped[y * cw + x] = gray[(crop.y + y) * w + (crop.x + x)];
+      }
+    }
+
+    for (var i = 0; i < cropped.length; i++) {
+      var g = (cropped[i] - 128) * 1.5 + 128;
+      cropped[i] = g < 0 ? 0 : g > 255 ? 255 : g;
+    }
+
+    var th = otsuThreshold(cropped);
+    var otsu = new Uint8Array(cropped.length);
+    for (var j = 0; j < cropped.length; j++) otsu[j] = cropped[j] < th ? 0 : 255;
+
+    var sharp = new Uint8Array(cropped.length);
+    for (var y = 1; y < ch - 1; y++) {
+      for (var x = 1; x < cw - 1; x++) {
+        var i = y * cw + x;
+        var v = 5 * cropped[i] - cropped[i - 1] - cropped[i + 1] - cropped[i - cw] - cropped[i + cw];
+        sharp[i] = v < 0 ? 0 : v > 255 ? 255 : v;
+      }
+    }
+
+    function addVariant(grayBuf, invert) {
+      var c = document.createElement("canvas");
+      c.width = cw; c.height = ch;
+      putGray(c.getContext("2d"), grayBuf, cw, ch, invert);
+      variants.push(c.toDataURL("image/png"));
+    }
+
+    addVariant(cropped, false);
+    addVariant(sharp, false);
+    addVariant(otsu, true);
+    return variants;
   }
 
   function parseTrAmount(raw) {
@@ -55,30 +191,11 @@
 
   function parseDateFromLine(line) {
     var s = ocrFix(line);
-    var patterns = [
-      /(\d{1,2})\s*[./\-]\s*(\d{1,2})\s*[./\-]\s*(\d{2,4})/,
-      /(\d{1,2})\s+(\d{1,2})\s+(\d{4})/
-    ];
-    for (var i = 0; i < patterns.length; i++) {
-      var m = s.match(patterns[i]);
-      if (m) {
-        var dt = dateFromParts(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10));
-        if (dt) return dt;
-      }
-    }
+    var m = s.match(/(\d{1,2})\s*[./\-]\s*(\d{1,2})\s*[./\-]\s*(\d{2,4})/);
+    if (m) return dateFromParts(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10));
+    m = s.match(/(\d{1,2})\s+(\d{1,2})\s+(\d{4})/);
+    if (m) return dateFromParts(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10));
     return null;
-  }
-
-  function findAllDates(text) {
-    var dates = [];
-    var s = ocrFix(text);
-    var re = /(\d{1,2})\s*[./\-]\s*(\d{1,2})\s*[./\-]\s*(\d{2,4})/g;
-    var m;
-    while ((m = re.exec(s))) {
-      var dt = dateFromParts(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10));
-      if (dt) dates.push(dt);
-    }
-    return dates;
   }
 
   function parseFisText(text) {
@@ -87,10 +204,10 @@
     var tarih = null;
 
     for (var i = 0; i < lines.length; i++) {
-      var ln = ocrFix(lines[i]);
-      if (/TAR[Iİ1L]H|DATE/i.test(ln)) {
+      if (/TAR[Iİ1L]H|DATE/i.test(ocrFix(lines[i]))) {
         tarih = parseDateFromLine(lines[i]);
         if (!tarih && i + 1 < lines.length) tarih = parseDateFromLine(lines[i + 1]);
+        if (!tarih && i + 2 < lines.length) tarih = parseDateFromLine(lines[i + 2]);
         if (tarih) break;
       }
     }
@@ -101,12 +218,17 @@
     }
 
     if (!tarih) {
-      var all = findAllDates(text);
-      if (all.length) tarih = all[0];
+      var re = /(\d{1,2})\s*[./\-]\s*(\d{1,2})\s*[./\-]\s*(\d{2,4})/g;
+      var m, found = [];
+      while ((m = re.exec(fixed))) {
+        var dt = dateFromParts(parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10));
+        if (dt) found.push(dt);
+      }
+      if (found.length) tarih = found[0];
     }
 
-    var totalKeys = /GENEL\s*TOPLAM|^TOPLAM|ÖDENECEK|ODENECEK|NET\s*TUTAR|TAHS[Iİ]L/i;
-    var skipTotal = /TOPKDV|KDV\s*TOP/i;
+    var totalKeys = /GENEL\s*TOPLAM|^TOPLAM|ÖDENECEK|ODENECEK|NET\s*TUTAR|TAHS[Iİ]L|KRED[Iİ]|NAK[Iİ]T/i;
+    var skipTotal = /TOPKDV|KDV\s*TOP|Kg\s*X|X\s*\d/i;
     var tutar = null;
     var candidates = [];
     for (var j = 0; j < lines.length; j++) {
@@ -119,6 +241,17 @@
       }
     }
     if (candidates.length) tutar = Math.max.apply(null, candidates);
+
+    if (!tutar) {
+      var all = [];
+      lines.forEach(function (ln) {
+        if (!skipTotal.test(ocrFix(ln))) all = all.concat(extractAmounts(ln));
+      });
+      if (all.length) {
+        all.sort(function (a, b) { return b - a; });
+        tutar = all[0];
+      }
+    }
 
     var aciklama = "";
     var storeRe = /MARKET|MIGROS|BIM|A101|ŞOK|SOK|CARREFOUR|TEKEL|ECZANE/i;
@@ -142,42 +275,52 @@
     return { tarih: tarih, tutar: tutar, aciklama: aciklama };
   }
 
-  function preprocessCanvas(img) {
-    var w = img.width, h = img.height;
-    var scale = 1;
-    if (w < 1400) scale = Math.max(scale, 1400 / w);
-    if (h < 2000 && h > w) scale = Math.max(scale, 2000 / h);
-    if (scale > 1) { w = Math.round(w * scale); h = Math.round(h * scale); }
-
-    var c = document.createElement("canvas");
-    c.width = w; c.height = h;
-    var ctx = c.getContext("2d");
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, w, h);
-    ctx.drawImage(img, 0, 0, w, h);
-
-    var id = ctx.getImageData(0, 0, w, h);
-    var d = id.data;
-    for (var i = 0; i < d.length; i += 4) {
-      var g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-      g = (g - 128) * 1.35 + 128;
-      g = g < 0 ? 0 : g > 255 ? 255 : g;
-      d[i] = d[i + 1] = d[i + 2] = g;
-    }
-    ctx.putImageData(id, 0, 0);
-    return c.toDataURL("image/png");
+  function mergeTexts(texts) {
+    var seen = {}, out = [];
+    texts.forEach(function (t) {
+      t.split(/\r?\n/).forEach(function (line) {
+        line = line.trim();
+        if (!line || line.length < 2) return;
+        var key = ocrFix(line).replace(/\s+/g, " ").toUpperCase();
+        if (!seen[key]) { seen[key] = true; out.push(line); }
+      });
+    });
+    return out.join("\n");
   }
 
-  function preprocessImage(file) {
+  function loadImage(file) {
     return new Promise(function (resolve, reject) {
       var img = new Image();
       var url = URL.createObjectURL(file);
-      img.onload = function () {
-        URL.revokeObjectURL(url);
-        resolve(preprocessCanvas(img));
-      };
+      img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
       img.onerror = reject;
       img.src = url;
+    });
+  }
+
+  function recognizeAll(variants, onProgress) {
+    var psms = ["4", "6"];
+    var jobs = [];
+    variants.forEach(function (v) { psms.forEach(function (p) { jobs.push({ img: v, psm: p }); }); });
+
+    return Tesseract.createWorker("tur+eng", 1, {
+      logger: function () {}
+    }).then(function (worker) {
+      var texts = [], step = 0;
+      function next() {
+        if (step >= jobs.length) {
+          return worker.terminate().then(function () { return texts; });
+        }
+        var job = jobs[step++];
+        if (onProgress) onProgress(step, jobs.length);
+        return worker.setParameters({ tessedit_pageseg_mode: job.psm }).then(function () {
+          return worker.recognize(job.img);
+        }).then(function (res) {
+          texts.push(res.data.text || "");
+          return next();
+        });
+      }
+      return next();
     });
   }
 
@@ -205,17 +348,15 @@
     }
     fisBtn.disabled = true;
     setStatus(msgs.reading, "load");
-    preprocessImage(file).then(function (dataUrl) {
-      return Tesseract.recognize(dataUrl, "tur+eng", {
-        tessedit_pageseg_mode: "6",
-        logger: function (m) {
-          if (m.status === "recognizing text" && fisStatus) {
-            setStatus(msgs.reading + " " + Math.round((m.progress || 0) * 100) + "%", "load");
-          }
-        }
+
+    loadImage(file).then(function (img) {
+      var variants = buildVariants(img);
+      return recognizeAll(variants, function (cur, total) {
+        setStatus(msgs.reading + " (" + cur + "/" + total + ")", "load");
       });
-    }).then(function (res) {
-      var parsed = parseFisText(res.data.text || "");
+    }).then(function (texts) {
+      var merged = mergeTexts(texts);
+      var parsed = parseFisText(merged);
       fillForm(parsed);
       var notes = [];
       if (!parsed.tarih) notes.push(msgs.noDate);
