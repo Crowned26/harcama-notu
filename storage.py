@@ -178,7 +178,8 @@ def _tarih(s):
 
 
 def ekle(aciklama, tutar, kategori=None, note="", tip="gider", odeme="nakit", konum="",
-         doviz="TRY", doviz_tutar=None, bolen=1, taksit_toplam=None, taksit_no=None, tekrar_id=None):
+         doviz="TRY", doviz_tutar=None, bolen=1, taksit_toplam=None, taksit_no=None, tekrar_id=None,
+         tarih=None):
     from kur import try_cevir
 
     init_db()
@@ -188,11 +189,15 @@ def ekle(aciklama, tutar, kategori=None, note="", tip="gider", odeme="nakit", ko
     tutar = try_cevir(kaynak, doviz)
     if doviz != "TRY":
         doviz_tutar = kaynak
+    if tarih and len(str(tarih).strip()) >= 10:
+        ts = str(tarih).strip()[:10] + " " + datetime.now().strftime("%H:%M")
+    else:
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M")
     with conn() as c:
         c.execute("""INSERT INTO kayitlar
             (tarih,aciklama,tutar,kategori,notes,tip,odeme,konum,doviz,doviz_tutar,bolen,taksit_toplam,taksit_no,tekrar_id)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (datetime.now().strftime("%Y-%m-%d %H:%M"), aciklama.strip(), tutar, kategori,
+            (ts, aciklama.strip(), tutar, kategori,
              note.strip(), tip, odeme, konum.strip(), doviz, doviz_tutar, max(1, int(bolen)),
              taksit_toplam, taksit_no, tekrar_id))
         rid = c.execute("SELECT last_insert_rowid()").fetchone()[0]

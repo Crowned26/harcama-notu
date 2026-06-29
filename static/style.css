@@ -252,6 +252,16 @@ input:focus, select:focus {
 .btn-danger { color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
 
 .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+.fis-status {
+  font-size: 0.85rem; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px;
+  background: var(--card); border: 1px solid var(--border);
+}
+.fis-load { color: var(--muted); }
+.fis-ok { border-color: #22c55e; color: #16a34a; }
+.fis-warn { border-color: #f59e0b; color: #d97706; }
+html.dark .fis-ok { color: #4ade80; }
+html.dark .fis-warn { color: #fbbf24; }
 .item-actions { display: flex; gap: 6px; margin-top: 8px; }
 
 .list { display: flex; flex-direction: column; gap: 10px; }

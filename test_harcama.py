@@ -54,6 +54,11 @@ class TestStorage(unittest.TestCase):
         g, _ = s.bugun_toplam()
         self.assertEqual(g, 10)
 
+    def test_ekle_tarih(self):
+        s.ekle("market", 99, "yemek", tarih="2024-03-15")
+        k = s.yukle()[0]
+        self.assertTrue(k["tarih"].startswith("2024-03-15"))
+
 
 if __name__ == "__main__":
     unittest.main()

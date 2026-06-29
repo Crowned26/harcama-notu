@@ -10,7 +10,10 @@
   <title>{{ tx('title') }}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body data-reminder="{{ hatirlatma }}" data-usd="{{ usd }}" data-eur="{{ eur }}" data-approx-try="{{ tx('approx_try') }}">
+<body data-reminder="{{ hatirlatma }}" data-usd="{{ usd }}" data-eur="{{ eur }}" data-approx-try="{{ tx('approx_try') }}"
+  data-fis-reading="{{ tx('receipt_reading') }}" data-fis-done="{{ tx('receipt_done') }}"
+  data-fis-partial="{{ tx('receipt_partial') }}" data-fis-fail="{{ tx('receipt_fail') }}"
+  data-fis-no-date="{{ tx('receipt_no_date') }}" data-fis-no-amount="{{ tx('receipt_no_amount') }}">
 <div class="wrap">
   <header class="top">
     <div><h1>{{ tx('title') }}</h1>
@@ -83,10 +86,12 @@
 
   <section class="panel" id="add">
     <p class="panel-title">{{ tx('edit') if duzenle else tx('add') }}</p>
+    {% if not duzenle %}<p class="fis-status" id="fisStatus" hidden></p>{% endif %}
     <form method="post" action="{{ url_for('guncelle_form', kid=duzenle.id) if duzenle else url_for('ekle_form') }}">
       <div class="grid">
         <div class="full"><label>{{ tx('desc') }}</label><input name="aciklama" value="{{ duzenle.aciklama if duzenle else '' }}" required></div>
         <div><label>{{ tx('amount') }}</label><input name="tutar" type="number" step="0.01" value="{{ duzenle.tutar if duzenle else '' }}" required></div>
+        {% if not duzenle %}<div><label>{{ tx('date') }}</label><input name="tarih" type="date" id="tarihInp"></div>{% endif %}
         <div><label>{{ tx('currency') }}</label><select name="doviz" id="dovizSel"><option value="TRY">TRY</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
         <div class="full" id="kurOnizleme" hidden><p class="item-meta" id="kurMetin"></p></div>
         <div><label>{{ tx('type') }}</label><select name="tip"><option value="gider">{{ tx('expense') }}</option><option value="gelir">{{ tx('income') }}</option></select></div>
@@ -99,6 +104,10 @@
       </div>
       <div class="actions">
         <button class="btn btn-primary" type="submit">{{ tx('save') if duzenle else tx('add') }}</button>
+        {% if not duzenle %}
+        <button type="button" class="btn btn-ghost" id="fisBtn">{{ tx('receipt_scan') }}</button>
+        <input type="file" id="fisInput" accept="image/*" capture="environment" hidden>
+        {% endif %}
         <button type="button" class="btn btn-ghost" id="voiceBtn">{{ tx('voice') }}</button>
         {% if duzenle %}<a class="btn btn-ghost" href="?tab=home&lang={{ lang }}">{{ tx('cancel') }}</a>{% endif %}
       </div>
@@ -178,6 +187,17 @@
   </section>
   {% endif %}
 </div>
+<script>
+  (function () {
+    var el = document.getElementById("tarihInp");
+    if (el && !el.value) {
+      var n = new Date();
+      el.value = n.getFullYear() + "-" + String(n.getMonth() + 1).padStart(2, "0") + "-" + String(n.getDate()).padStart(2, "0");
+    }
+  })();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="{{ url_for('static', filename='fis.js') }}"></script>
 <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

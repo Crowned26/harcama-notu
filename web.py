@@ -182,12 +182,14 @@ def ekle_form():
         if not aciklama:
             raise ValueError
         tutar = _parse_amount(request.form["tutar"])
+        tarih = request.form.get("tarih", "").strip() or None
         s.ekle(aciklama, tutar, request.form.get("kategori") or None,
                request.form.get("not", ""), request.form.get("tip", "gider"),
                request.form.get("odeme", "nakit"), request.form.get("konum", ""),
                request.form.get("doviz", "TRY"), request.form.get("doviz_tutar") or None,
                int(request.form.get("bolen", 1) or 1),
-               int(request.form["taksit"]) if request.form.get("taksit") else None, None)
+               int(request.form["taksit"]) if request.form.get("taksit") else None, None,
+               tarih=tarih)
     except (ValueError, KeyError):
         return render_template("index.html", **_ctx(_lang(), hata=t(_lang(), "invalid_amount")))
     return _redirect("msg_added")
