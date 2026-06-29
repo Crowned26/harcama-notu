@@ -88,25 +88,6 @@
     ctx.putImageData(id, 0, 0);
   }
 
-  function adaptiveBinary(gray, w, h, block, C) {
-    var out = new Uint8Array(gray.length);
-    var half = Math.floor(block / 2);
-    for (var y = 0; y < h; y++) {
-      for (var x = 0; x < w; x++) {
-        var sum = 0, cnt = 0;
-        for (var dy = -half; dy <= half; dy++) {
-          for (var dx = -half; dx <= half; dx++) {
-            var ny = y + dy, nx = x + dx;
-            if (ny >= 0 && ny < h && nx >= 0 && nx < w) { sum += gray[ny * w + nx]; cnt++; }
-          }
-        }
-        var mean = sum / cnt;
-        out[y * w + x] = gray[y * w + x] < mean - C ? 0 : 255;
-      }
-    }
-    return out;
-  }
-
   function buildVariants(img) {
     var scale = 1;
     var minW = 2200;
